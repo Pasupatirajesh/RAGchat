@@ -20,5 +20,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "test.js", "test_db.js"]
+  "include": ["src", "test.js", "test_db.js", "src/utils/bm25.ts"]
 }
