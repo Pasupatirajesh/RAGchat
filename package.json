@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-  
     "@supabase/supabase-js": "^2.39.7",
     "bm25": "^0.1.1",
     "idf": "^0.1.2",
