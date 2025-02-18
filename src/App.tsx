@@ -12,7 +12,12 @@ import { BM25 } from './utils/bm25.ts';
 import { GlobalWorkerOptions } from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
 
-GlobalWorkerOptions.workerSrc = pdfWorker;
+
+GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
 
 
 
