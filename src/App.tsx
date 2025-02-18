@@ -9,9 +9,10 @@ import { PDFDocument, utf16Decode } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { BM25 } from './utils/bm25.ts';
 
-import pdfWorker from "pdfjs-dist/build/pdf.worker.min?url";
+import { GlobalWorkerOptions } from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+GlobalWorkerOptions.workerSrc = pdfWorker;
 
 
 
