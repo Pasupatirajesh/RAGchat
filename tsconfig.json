@@ -6,10 +6,14 @@
   ],
   "compilerOptions": {
     "composite": true,
+    "typeRoots": [
+        "./node_modules/@types",
+        ".@types"
+    ],
     // ... other options ...
   },
   "include": [
     "src"
 , "src/utils/bm25.ts"    // ... other directories ...
-  ]
+, "server.js"  ]
 }

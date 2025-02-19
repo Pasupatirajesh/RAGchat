@@ -9,3 +9,4 @@ export interface Document {
   embedding: number[];
   metadata: Record<string, any>;
 }
+
