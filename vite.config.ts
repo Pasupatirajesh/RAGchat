@@ -1,24 +1,17 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    exclude: ['lucide-react'],
-  },
   build: {
+    chunkSizeWarningLimit: 1000, // Adjusts warning threshold (optional)
     rollupOptions: {
       output: {
         manualChunks: {
-          'pdfjs-dist': ['pdfjs-dist/build/pdf', 'pdfjs-dist/build/pdf.worker.min.mjs'],
+          "react-vendors": ["react", "react-dom"], // Splits React libraries
+          "pdfjs": ["pdfjs-dist"], // Splits PDF.js
         },
       },
-    },
-  },
-  resolve: {
-    alias: {
-      'pdfjs-dist/build/pdf.worker.entry': resolve(__dirname, 'node_modules/pdfjs-dist/build/pdf.worker.min.mjs'),
     },
   },
 });

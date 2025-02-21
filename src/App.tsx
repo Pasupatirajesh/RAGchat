@@ -3,11 +3,14 @@ import { Send } from 'lucide-react';
 import { ChatMessage } from './components/ChatMessage';
 import { Message } from './types';
 import OpenAI from 'openai';
-import { BM25 } from './utils/bm25';
 import { ConversationSummaryMemory } from "langchain/memory";
 import { ChatOpenAI } from "@langchain/openai";
-import { FileUpload } from './components/FileUpload';
+import { FileUpload } from './components/FileUpload'
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // Explicitly use .mjs
 
+// Set the correct worker file for the browser
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true // REMOVE THIS IN PRODUCTION
@@ -35,23 +38,34 @@ function App() {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
- 
+
+// const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+//   if (event.target.files && event.target.files.length > 0) {
+//     setFile(event.target.files[0]); // ✅ Set file state correctly
+//   }
+// };
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const bm25 = new BM25();
 
-  const handleFileUpload = async () => {
+  // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (event.target.files) {
+  //     setFile(event.target.files[0]);
+  //   }
+  // };
+
+  const handleFileUpload = async (file:File) => {
+    setFile(file);
     if (!file) {
       setError("No file selected. Please choose a file before uploading.");
       return;
     }
-
-    setIsProcessing(true);
-    setError(null);
-
+    
+    setIsUploading(true);
+ 
     const formData = new FormData();
     formData.append('document', file);
 
@@ -78,7 +92,7 @@ function App() {
       setError(error instanceof Error ? error.message : 'Unknown error');
       setMessages(prev => [...prev, { role: 'system', content: `Error uploading ${file.name}: ${error}` }]);
     } finally {
-      setIsProcessing(false);
+      setIsUploading(false);
     }
   };
 
@@ -165,7 +179,21 @@ function App() {
     <div className="flex flex-col h-screen bg-gray-50">
       <header className="flex items-center justify-between px-6 py-4 bg-white border-b shadow-sm">
         <h1 className="text-xl font-semibold text-gray-800">RAG Chat System</h1>
-        <FileUpload onUpload={handleFileUpload} isUploading={isUploading} />
+        <div>
+        {/* <input type="file" onChange={handleFileChange} /> */}
+
+         <FileUpload onUpload={handleFileUpload} isUploading={isUploading} /> 
+         {file && <p className="mt-4 text-green-600">Selected File: {file.name}</p>}
+          {/* <button onClick={handleFileUpload} disabled={isUploading || !file}>
+          {isProcessing ? 'Uploading...' : 'Upload Document'}
+          </button> */}
+        </div>
+
+          {/* <input type="file" onChange={handleFileChange} /> */} 
+          {/* <button onClick={handleFileUpload} disabled={isProcessing || !file}>
+            {isProcessing ? 'Uploading...' : 'Upload Document'} */}
+          {/* </button>
+        </div> */}
       </header>
 
       <main className="flex-1 overflow-y-auto p-6 space-y-4">
