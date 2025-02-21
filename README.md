@@ -4,7 +4,7 @@ User-uploaded documents are converted into vector embeddings using OpenAI's text
 
 The application is continuously deployed using Netlify, providing seamless updates and ensuring the latest version is always live. With automatic build and deploy pipelines, every change made to the codebase is automatically reflected in the production environment, making the deployment process fast and efficient.
 
-THe site lives here : https://glowing-bavarois-afec96.netlify.app/
+The site lives here : https://glowing-bavarois-afec96.netlify.app/
 
 
 <img width="1235" alt="Screenshot 2025-02-21 at 5 37 54 PM" src="https://github.com/user-attachments/assets/fc49f0ad-ef10-4f72-9767-88af96a99d88" />
