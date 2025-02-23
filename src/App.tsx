@@ -9,6 +9,7 @@ import { FileUpload } from './components/FileUpload'
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // Explicitly use .mjs
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // Set the correct worker file for the browser
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 const openai = new OpenAI({
@@ -70,7 +71,7 @@ function App() {
     formData.append('document', file);
 
     try {
-      const response = await fetch('http://localhost:3000/upload', {
+      const response = await fetch(`${API_BASE_URL}`, {
         method: 'POST',
         body: formData,
       });
@@ -110,7 +111,7 @@ function App() {
         console.log('Generating embedding for input:', input);
         const queryEmbedding = await generateEmbedding(input);
 
-        const response = await fetch('http://localhost:3000/query', {
+        const response = await fetch(`${API_BASE_URL}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
