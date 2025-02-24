@@ -9,8 +9,8 @@ import { FileUpload } from './components/FileUpload'
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // Explicitly use .mjs
 
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || process.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL;
 
 console.log("VITE_API_BASE_URL:", API_BASE_URL);
 
