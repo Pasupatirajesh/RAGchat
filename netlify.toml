@@ -1,5 +1,7 @@
 [build]
   functions = "functions"
+[build.environment]
+  NODE_VERSION = "20"
 
 [functions]
   external_node_modules = ["express"]
