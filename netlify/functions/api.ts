@@ -14,12 +14,9 @@ import * as pdfjsLib from "pdfjs-dist";
 
 dotenv.config();
 
-let __dirname: string;
-try {
-  __dirname = path.dirname(fileURLToPath(import.meta.url));
-} catch (error) {
-  __dirname = process.cwd(); // Fallback for environments without import.meta.url
-}
+
+const __dirname = path.resolve(); // Ensures compatibility with CommonJS
+
 
 // Set worker source
 if (typeof pdfjsLib.GlobalWorkerOptions !== 'undefined') {
