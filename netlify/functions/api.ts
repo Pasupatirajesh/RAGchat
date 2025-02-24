@@ -12,12 +12,15 @@ import { fileURLToPath } from "url";
 import mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `./pdf.worker.min.js`;
-
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Set worker source
+if (typeof pdfjsLib.GlobalWorkerOptions !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
+}
 
 const app = express();
 app.use(cors());
@@ -60,13 +63,17 @@ const extractTextFromFile = async (file: Express.Multer.File): Promise<string> =
     if (file.mimetype === "text/plain") {
       return fileBuffer.toString("utf-8");
     } else if (file.mimetype === "application/pdf") {
+      // Load the PDF document
       const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) }).promise;
       let fullText = "";
 
+      // Iterate over each page in the PDF
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item) => item.str).join(" ");
+
+        // Extract the text items from the content
+        const pageText = textContent.items.map(item => item.str).join(" ");
         fullText += pageText + "\n";
       }
 
@@ -106,7 +113,19 @@ const chunkText = (text: string, maxTokens: number): string[] => {
 const handler: Handler = async (event) => {
   if (event.path === "/upload" && event.httpMethod === "POST") {
     try {
-      const file = upload.single("document");
+      const multerResult = await new Promise((resolve, reject) => {
+        upload.single("document")(event.req, event.res, (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve({ req: event.req, res: event.res });
+        });
+      });
+
+      // Access the uploaded file from the request object
+      const file = multerResult.req.file;
+
       if (!file) {
         return {
           statusCode: 400,
