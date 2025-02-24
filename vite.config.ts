@@ -10,6 +10,7 @@ export default defineConfig({
         manualChunks: {
           "react-vendors": ["react", "react-dom"], // Splits React libraries
           "pdfjs": ["pdfjs-dist"], // Splits PDF.js
+          'process.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL),
         },
       },
     },
