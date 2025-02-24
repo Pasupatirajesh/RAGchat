@@ -62,22 +62,22 @@ const extractTextFromFile = async (file: Express.Multer.File): Promise<string> =
 
     if (file.mimetype === "text/plain") {
       return fileBuffer.toString("utf-8");
-    } else if (file.mimetype === "application/pdf") {
-      // Load the PDF document
-      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) }).promise;
-      let fullText = "";
+    // } else if (file.mimetype === "application/pdf") {
+    //   // Load the PDF document
+    //   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(fileBuffer) }).promise;
+    //   let fullText = "";
 
-      // Iterate over each page in the PDF
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
+      // // Iterate over each page in the PDF
+      // for (let i = 1; i <= pdf.numPages; i++) {
+      //   const page = await pdf.getPage(i);
+      //   const textContent = await page.getTextContent();
 
-        // Extract the text items from the content
-        const pageText = textContent.items.map(item => item.str).join(" ");
-        fullText += pageText + "\n";
-      }
+      //   // Extract the text items from the content
+      //   const pageText = textContent.items.map(item => item.str).join(" ");
+      //   fullText += pageText + "\n";
+      // }
 
-      return fullText;
+      // return fullText;
     } else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
       const docxData = await mammoth.extractRawText({ buffer: fileBuffer });
       return docxData.value;
