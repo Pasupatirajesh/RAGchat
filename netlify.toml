@@ -1,8 +1,10 @@
 [build]
-  functions = "netlify/functions"
   publish = "dist"  # Or the directory where your Vite app is built
 
+
+
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
 
 [dev]
