@@ -1,7 +1,5 @@
 [build]
-  publish = "dist"  # Or the directory where your Vite app is built
-
-
+  publish = "dist"
 
 [functions]
   directory = "netlify/functions"
