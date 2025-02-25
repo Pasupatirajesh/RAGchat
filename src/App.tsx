@@ -9,8 +9,7 @@ import { FileUpload } from './components/FileUpload'
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // Explicitly use .mjs
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-// const API_BASE_URL = "http://localhost:3000/.netlify/functions/api";
+const API_BASE_URL = "https://glowing-bavarois-afec96.netlify.app/.netlify/functions";
 
 console.log("VITE_API_BASE_URL:", API_BASE_URL);
 
@@ -44,25 +43,11 @@ function App() {
   const [isLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-// const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-//   if (event.target.files && event.target.files.length > 0) {
-//     setFile(event.target.files[0]); // ✅ Set file state correctly
-//   }
-// };
-
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-
-  // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   if (event.target.files) {
-  //     setFile(event.target.files[0]);
-  //   }
-  // };
-
-  const handleFileUpload = async (file:File) => {
+  const handleFileUpload = async (file: File) => {
     setFile(file);
     if (!file) {
       setError("No file selected. Please choose a file before uploading.");
@@ -165,8 +150,7 @@ function App() {
     } finally {
         setIsProcessing(false);
     }
-};
-
+  };
 
   const generateEmbedding = async (text: string): Promise<number[]> => {
     try {
@@ -186,20 +170,9 @@ function App() {
       <header className="flex items-center justify-between px-6 py-4 bg-white border-b shadow-sm">
         <h1 className="text-xl font-semibold text-gray-800">RAG Chat System</h1>
         <div>
-        {/* <input type="file" onChange={handleFileChange} /> */}
-
          <FileUpload onUpload={handleFileUpload} isUploading={isUploading} /> 
          {file && <p className="mt-4 text-green-600">Selected File: {file.name}</p>}
-          {/* <button onClick={handleFileUpload} disabled={isUploading || !file}>
-          {isProcessing ? 'Uploading...' : 'Upload Document'}
-          </button> */}
         </div>
-
-          {/* <input type="file" onChange={handleFileChange} /> */} 
-          {/* <button onClick={handleFileUpload} disabled={isProcessing || !file}>
-            {isProcessing ? 'Uploading...' : 'Upload Document'} */}
-          {/* </button>
-        </div> */}
       </header>
 
       <main className="flex-1 overflow-y-auto p-6 space-y-4">
