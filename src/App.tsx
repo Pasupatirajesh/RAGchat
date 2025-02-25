@@ -9,8 +9,8 @@ import { FileUpload } from './components/FileUpload'
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // Explicitly use .mjs
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-// const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL;
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = "http://localhost:3000/.netlify/functions/api";
 
 console.log("VITE_API_BASE_URL:", API_BASE_URL);
 
@@ -30,7 +30,6 @@ const llm = new ChatOpenAI({
 
 const memory = new ConversationSummaryMemory({
   llm: llm,
-  maxHistory: 5,
 });
 
 function App() {
@@ -42,7 +41,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
 // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,9 +75,10 @@ function App() {
     formData.append('document', file);
 
     try {
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
+        headers: { 'Accept': 'application/json' } 
       });
 
       if (!response.ok) {
@@ -116,7 +116,7 @@ function App() {
         console.log('Generating embedding for input:', input);
         const queryEmbedding = await generateEmbedding(input);
 
-        const response = await fetch(`${API_BASE_URL}`, {
+        const response = await fetch(`${API_BASE_URL}/query`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -11,12 +11,16 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 import mammoth from "mammoth";
 import * as pdfjsLib from "pdfjs-dist";
+import serverless from "serverless-http";
 
 dotenv.config();
 
-
-const __dirname = path.resolve(); // Ensures compatibility with CommonJS
-
+let __dirname: string;
+try {
+  __dirname = path.dirname(fileURLToPath(import.meta.url));
+} catch (error) {
+  __dirname = process.cwd(); // Fallback for environments without import.meta.url
+}
 
 // Set worker source
 if (typeof pdfjsLib.GlobalWorkerOptions !== 'undefined') {
@@ -26,6 +30,7 @@ if (typeof pdfjsLib.GlobalWorkerOptions !== 'undefined') {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const upload = multer({ dest: "/tmp/uploads/" }); // Use /tmp for Netlify Functions
 
@@ -111,89 +116,62 @@ const chunkText = (text: string, maxTokens: number): string[] => {
   return chunks;
 };
 
-const handler: Handler = async (event: any, context: Context) => {
-  if (event.path === "/upload" && event.httpMethod === "POST") {
-    try {
-      const multerResult = await new Promise((resolve, reject) => {
-        upload.single("document")((event as any).req, (event as any).res, (err) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve({ req: (event as any).req, res: (event as any).res });
-        });
-      });
-
-      // Access the uploaded file from the request object
-      const file = (multerResult.req as any).file;
-
-      if (!file) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: "No file uploaded" }),
-        };
-      }
-
-      const extractedText = await extractTextFromFile(file);
-      if (!extractedText) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: "Could not extract text from the file." }),
-        };
-      }
-
-      const maxTokens = 8192;
-      const chunks = chunkText(extractedText, maxTokens);
-
-      for (const chunk of chunks) {
-        const documents = [{ pageContent: chunk, metadata: { filename: file.originalname } }];
-        await vectorStore.addDocuments(documents);
-      }
-
-      fs.unlinkSync(file.path);
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: "Document processed and added to vector store successfully" }),
-      };
-    } catch (error) {
-      console.error("Error processing document:", error);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Failed to process document", details: error.message }),
-      };
-    }
+app.post("/upload", upload.single("document"), async (req: any, res: any): Promise<void> => {
+  console.log("Received /upload request");
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
   }
 
-  if (event.path === "/query" && event.httpMethod === "POST") {
-    try {
-      const { query } = JSON.parse(event.body || "{}");
+  console.log("Uploaded file details:", req.file);
 
-      if (!query) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: "Query is required" }),
-        };
-      }
+  try {
+    const file = req.file;
+    const extractedText = await extractTextFromFile(file);
 
-      const results = await vectorStore.similaritySearch(query, 5);
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ results }),
-      };
-    } catch (error) {
-      console.error("Error during similarity search:", error);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Failed to perform similarity search", details: error.message }),
-      };
+    if (!extractedText) {
+      res.status(400).json({ error: "Could not extract text from the file." });
+      return;
     }
+
+    // Chunk the extracted text
+    const maxTokens = 8192;
+    const chunks = chunkText(extractedText, maxTokens);
+
+    // Concurrently add all chunks to the vector store
+    await Promise.all(chunks.map(chunk => {
+      const documents = [{ pageContent: chunk, metadata: { filename: file.originalname } }];
+      return vectorStore.addDocuments(documents);
+    }));
+
+    // Delete the uploaded file
+    await fs.promises.unlink(file.path);
+    console.log("File deleted successfully");
+
+    res.status(200).json({ message: "Document processed and added to vector store successfully" });
+  } catch (error) {
+    console.error("Error processing document:", error);
+    res.status(500).json({ error: "Failed to process document", details: error.message });
+  }
+});
+
+app.post("/query", async (req: any, res: any) => {
+  const { query } = req.body;
+
+  if (!query) {
+    res.status(400).json({ error: "Query is required" });
+    return;
   }
 
-  return {
-    statusCode: 404,
-    body: JSON.stringify({ error: "Not Found" }),
-  };
-};
+  try {
+    const results = await vectorStore.similaritySearch(query, 5);
+    res.status(200).json({ results });
+  } catch (error) {
+    console.error("Error during similarity search:", error);
+    res.status(500).json({ error: "Failed to perform similarity search", details: error.message });
+  }
+});
+
+const handler = serverless(app);
 
 export { handler };

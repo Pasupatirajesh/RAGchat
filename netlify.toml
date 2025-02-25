@@ -1,17 +1,13 @@
 [build]
-  functions = "functions"
-[build.environment]
-  NODE_VERSION = "20"
+  functions = "netlify/functions"
+  publish = "dist"  # Or the directory where your Vite app is built
 
 [functions]
-  external_node_modules = ["express"]
   node_bundler = "esbuild"
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = false
-  
+[dev]
+  framework = "vite"
+  command = "npm run dev"
+  port = 3000
 
 
