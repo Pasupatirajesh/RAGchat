@@ -116,7 +116,7 @@ const chunkText = (text: string, maxTokens: number): string[] => {
   return chunks;
 };
 
-app.post("/upload", upload.single("document"), async (req: any, res: any): Promise<void> => {
+app.post("upload", upload.single("document"), async (req: any, res: any): Promise<void> => {
   console.log("Received /upload request");
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
@@ -155,7 +155,7 @@ app.post("/upload", upload.single("document"), async (req: any, res: any): Promi
   }
 });
 
-app.post("/query", async (req: any, res: any) => {
+app.post("query", async (req: any, res: any) => {
   const { query } = req.body;
 
   if (!query) {
