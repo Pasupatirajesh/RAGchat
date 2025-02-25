@@ -9,7 +9,8 @@ import { FileUpload } from './components/FileUpload'
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // Explicitly use .mjs
 
-const API_BASE_URL = "https://glowing-bavarois-afec96.netlify.app/.netlify/functions/api";
+// const API_BASE_URL = "https://glowing-bavarois-afec96.netlify.app/.netlify/functions/api";
+const API_BASE_URL = "http://localhost:8888/.netlify/functions/api";
 
 console.log("VITE_API_BASE_URL:", API_BASE_URL);
 

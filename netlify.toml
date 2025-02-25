@@ -1,5 +1,7 @@
 [build]
+  command = "npm run build"
   publish = "dist"
+  
 
 [functions]
   directory = "netlify/functions"
@@ -8,6 +10,13 @@
 [dev]
   framework = "vite"
   command = "npm run dev"
-  port = 3000
+  port = 8888
+[[redirects]]
+  from = "/api/upload"
+  to = "/.netlify/functions/api"
+  status = 200
 
-
+[[redirects]]
+  from = "/api/query"
+  to = "/.netlify/functions/api"
+  status = 200
