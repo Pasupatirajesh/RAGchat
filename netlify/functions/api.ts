@@ -2,10 +2,8 @@ import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { Pinecone as PineconeClient } from '@pinecone-database/pinecone';
 import { PineconeStore } from '@langchain/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
-import * as fs from 'fs';
-import * as path from 'path';
 import mammoth from 'mammoth';
-import * as pdfjsLib from 'pdfjs-dist';
+import { default as pdfParse } from 'pdf-parse/lib/pdf-parse.js'; 
 import dotenv from 'dotenv';
 import multer from 'multer';
 import { Readable } from 'stream';
@@ -42,15 +40,8 @@ const extractTextFromFile = async (file: Buffer, mimetype: string): Promise<stri
     if (mimetype === 'text/plain') {
       return file.toString('utf-8');
     } else if (mimetype === 'application/pdf') {
-      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(file) }).promise;
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item) => item.str).join(' ');
-        fullText += pageText + '\n';
-      }
-      return fullText;
+      const data = await pdfParse(file); // `file` should be a Buffer or Uint8Array
+      return data.text;
     } else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       const docxData = await mammoth.extractRawText({ buffer: file });
       return docxData.value;
@@ -173,7 +164,17 @@ const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerConte
 
 // Handler for the query route
 const queryHandler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
-  const { query } = JSON.parse(event.body || '{}');
+  let body;
+  try {
+    body = JSON.parse(event.body || '{}');
+  } catch (error) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Invalid JSON' }),
+    };
+  }
+
+  const { query } = body;
   if (!query) {
     return {
       statusCode: 400,
