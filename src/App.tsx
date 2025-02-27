@@ -5,17 +5,9 @@ import { Message } from './types';
 import OpenAI from 'openai';
 import { ConversationSummaryMemory } from "langchain/memory";
 import { ChatOpenAI } from "@langchain/openai";
-import { FileUpload } from './components/FileUpload'
-// import * as pdfjsLib from "pdfjs-dist";
-// import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url"; // Explicitly use .mjs
+import { FileUpload } from './components/FileUpload';
 
-const API_BASE_URL = "https://glowing-bavarois-afec96.netlify.app/.netlify/functions/api";
-//const API_BASE_URL = "http://localhost:8888/.netlify/functions/api";
-
-console.log("VITE_API_BASE_URL:", API_BASE_URL);
-
-// Set the correct worker file for the browser
-// pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+const API_BASE_URL = "http://localhost:8888/.netlify/functions/api";
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -43,10 +35,36 @@ function App() {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [latestDocId, setLatestDocId] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<{ id: string, name: string }[]>([]);
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+
+      const result = await response.json();
+      setDocuments(result.documents);
+    } catch (error) {
+      console.error('Fetch documents error:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error');
+    }
+  };
 
   const handleFileUpload = async (file: File) => {
     setFile(file);
@@ -74,10 +92,13 @@ function App() {
       const result = await response.json();
       console.log(result.message);
 
-      setMessages(prev => [...prev, {
-        role: 'system',
-        content: `Successfully uploaded and processed ${file.name}. You can now ask questions about it!`
-      }]);
+      if (result.documentId) {
+        setLatestDocId(result.documentId);
+        setSelectedDocId(result.documentId);
+        setDocuments(prev => [...prev, { id: result.documentId, name: file.name }]);
+        // Clear context and reset messages
+        setMessages([{ role: 'system', content: `Successfully uploaded and processed ${file.name}. You can now ask questions about it!` }]);
+      }
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -90,7 +111,7 @@ function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isProcessing) return;
+    if (!input.trim() || isProcessing || !selectedDocId) return;
 
     const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
@@ -107,7 +128,7 @@ function App() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ query: input, embedding: queryEmbedding }),
+            body: JSON.stringify({ query: input, embedding: queryEmbedding, documentId: selectedDocId }),
         });
 
         if (!response.ok) {
@@ -115,10 +136,22 @@ function App() {
         }
 
         const result = await response.json();
-        const relevantChunks = result.results.map((doc: any) => doc.pageContent).slice(0, 2).join("\n\n");
+        const relevantChunks = result.results
+                              .filter((doc: any) => doc.metadata.documentId === selectedDocId)  // Ensure only latest doc data
+                              .map((doc: any) => doc.pageContent)
+                              .slice(0, 5)
+                              .join("\n\n");
+        
         console.log(`Retrieved ${result.results.length} relevant chunks`);
 
-        const systemPrompt = { role: "system", content: `Use the context below to answer the user's question.\n\nContext:\n${relevantChunks}` };
+        const systemPrompt = { 
+          role: "system", 
+          content: `You are an AI assistant answering questions about the uploaded document: "${file?.name || 'Latest Document'}". 
+          Only use the context provided below and do NOT guess or make up information. If the answer is not in the document, reply with: 
+          "I could not find relevant information in the document." 
+        
+          Context:\n${relevantChunks}`
+        };
         
         // Ensure conversationHistory.history is an array
         const history = Array.isArray(conversationHistory.history) ? conversationHistory.history : [];
@@ -129,7 +162,6 @@ function App() {
             ...history.map((msg: any) => ({ role: msg.role, content: msg.content })), // Ensure each message is an object
             userMessage
           ];
-
 
         const completion = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
@@ -198,6 +230,16 @@ function App() {
       <footer className="border-t bg-white p-4">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
           <div className="flex gap-4">
+            <select
+              value={selectedDocId || ''}
+              onChange={(e) => setSelectedDocId(e.target.value)}
+              className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="" disabled>Select a document</option>
+              {documents.map((doc) => (
+                <option key={doc.id} value={doc.id}>{doc.name}</option>
+              ))}
+            </select>
             <input
               type="text"
               value={input}

@@ -2,11 +2,14 @@ import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { Pinecone as PineconeClient } from '@pinecone-database/pinecone';
 import { PineconeStore } from '@langchain/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
+import * as fs from 'fs';
+import * as path from 'path';
 import mammoth from 'mammoth';
-import { default as pdfParse } from 'pdf-parse/lib/pdf-parse.js'; 
+import pdfParse from 'pdf-parse';
 import dotenv from 'dotenv';
 import multer from 'multer';
 import { Readable } from 'stream';
+import { v4 as uuidv4 } from 'uuid'; // Import UUID for generating unique document IDs
 
 dotenv.config();
 
@@ -87,6 +90,23 @@ const bufferToStream = (buffer: Buffer) => {
   return stream;
 };
 
+// Path to store document metadata
+const metadataFilePath = path.join(__dirname, 'documentMetadata.json');
+
+// Load document metadata from file
+const loadDocumentMetadata = (): { id: string, name: string }[] => {
+  if (fs.existsSync(metadataFilePath)) {
+    const data = fs.readFileSync(metadataFilePath, 'utf-8');
+    return JSON.parse(data);
+  }
+  return [];
+};
+
+// Save document metadata to file
+const saveDocumentMetadata = (metadata: { id: string, name: string }[]) => {
+  fs.writeFileSync(metadataFilePath, JSON.stringify(metadata, null, 2));
+};
+
 // Handler for the upload route
 const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
   return new Promise((resolve, reject) => {
@@ -134,6 +154,9 @@ const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerConte
           });
         }
 
+        // Generate a unique document ID
+        const documentId = uuidv4();
+
         // Chunk the extracted text
         const maxTokens = 8192;
         const chunks = chunkText(extractedText, maxTokens);
@@ -141,15 +164,24 @@ const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerConte
         // Add all chunks to the vector store concurrently
         await Promise.all(
           chunks.map((chunk) => {
-            const documents = [{ pageContent: chunk, metadata: { filename: file.originalname } }];
+            const documents = [{ pageContent: chunk, metadata: { filename: file.originalname, documentId } }];
             return vectorStore.addDocuments(documents);
           })
         );
 
-        // Respond with success
+        // Load existing metadata
+        const metadata = loadDocumentMetadata();
+
+        // Add new document metadata
+        metadata.push({ id: documentId, name: file.originalname });
+
+        // Save updated metadata
+        saveDocumentMetadata(metadata);
+
+        // Respond with success and return the document ID
         resolve({
           statusCode: 200,
-          body: JSON.stringify({ message: 'Document processed and added to vector store successfully' }),
+          body: JSON.stringify({ message: 'Document processed and added to vector store successfully', documentId }),
         });
       } catch (error) {
         console.error('Error processing document:', error);
@@ -160,6 +192,23 @@ const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerConte
       }
     });
   });
+};
+
+// Handler for fetching document metadata
+const fetchDocumentsHandler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
+  try {
+    const metadata = loadDocumentMetadata();
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ documents: metadata }),
+    };
+  } catch (error) {
+    console.error('Error fetching document metadata:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to fetch document metadata', details: error.message }),
+    };
+  }
 };
 
 // Handler for the query route
@@ -174,7 +223,7 @@ const queryHandler: Handler = async (event: HandlerEvent, context: HandlerContex
     };
   }
 
-  const { query } = body;
+  const { query, documentId } = body;
   if (!query) {
     return {
       statusCode: 400,
@@ -182,11 +231,20 @@ const queryHandler: Handler = async (event: HandlerEvent, context: HandlerContex
     };
   }
 
+  if (!documentId) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Document ID is required' }),
+    };
+  }
+
   try {
     const results = await vectorStore.similaritySearch(query, 5);
+    const filteredResults = results.filter((doc: any) => doc.metadata.documentId === documentId);
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ results }),
+      body: JSON.stringify({ results: filteredResults }),
     };
   } catch (error) {
     console.error('Error during similarity search:', error);
@@ -205,6 +263,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     return uploadHandler(event, context);
   } else if (path === '/.netlify/functions/api/query') {
     return queryHandler(event, context);
+  } else if (path === '/.netlify/functions/api/documents') {
+    return fetchDocumentsHandler(event, context);
   } else {
     return {
       statusCode: 404,
