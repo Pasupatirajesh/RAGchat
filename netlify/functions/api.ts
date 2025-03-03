@@ -90,23 +90,6 @@ const bufferToStream = (buffer: Buffer) => {
   return stream;
 };
 
-// Path to store document metadata
-const metadataFilePath = path.join(__dirname, 'documentMetadata.json');
-
-// Load document metadata from file
-const loadDocumentMetadata = (): { id: string, name: string }[] => {
-  if (fs.existsSync(metadataFilePath)) {
-    const data = fs.readFileSync(metadataFilePath, 'utf-8');
-    return JSON.parse(data);
-  }
-  return [];
-};
-
-// Save document metadata to file
-const saveDocumentMetadata = (metadata: { id: string, name: string }[]) => {
-  fs.writeFileSync(metadataFilePath, JSON.stringify(metadata, null, 2));
-};
-
 // Handler for the upload route
 const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
   return new Promise((resolve, reject) => {
@@ -137,10 +120,11 @@ const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerConte
       }
 
       const file = req.file;
-      if (!file) {
+      const sessionId = req.headers['session-id'];
+      if (!file || !sessionId) {
         return resolve({
           statusCode: 400,
-          body: JSON.stringify({ error: 'No file uploaded' }),
+          body: JSON.stringify({ error: 'No file or session ID provided' }),
         });
       }
 
@@ -164,19 +148,10 @@ const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerConte
         // Add all chunks to the vector store concurrently
         await Promise.all(
           chunks.map((chunk) => {
-            const documents = [{ pageContent: chunk, metadata: { filename: file.originalname, documentId } }];
+            const documents = [{ pageContent: chunk, metadata: { filename: file.originalname, documentId, sessionId } }];
             return vectorStore.addDocuments(documents);
           })
         );
-
-        // Load existing metadata
-        const metadata = loadDocumentMetadata();
-
-        // Add new document metadata
-        metadata.push({ id: documentId, name: file.originalname });
-
-        // Save updated metadata
-        saveDocumentMetadata(metadata);
 
         // Respond with success and return the document ID
         resolve({
@@ -192,23 +167,6 @@ const uploadHandler: Handler = async (event: HandlerEvent, context: HandlerConte
       }
     });
   });
-};
-
-// Handler for fetching document metadata
-const fetchDocumentsHandler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
-  try {
-    const metadata = loadDocumentMetadata();
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ documents: metadata }),
-    };
-  } catch (error) {
-    console.error('Error fetching document metadata:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to fetch document metadata', details: error.message }),
-    };
-  }
 };
 
 // Handler for the query route
@@ -251,6 +209,38 @@ const queryHandler: Handler = async (event: HandlerEvent, context: HandlerContex
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Failed to perform similarity search', details: error.message }),
+    };
+  }
+};
+
+// Handler for fetching documents
+const fetchDocumentsHandler: Handler = async (event: HandlerEvent, context: HandlerContext): Promise<HandlerResponse> => {
+  const sessionId = event.headers['session-id'];
+  if (!sessionId) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Session ID is required' }),
+    };
+  }
+
+  try {
+    const results = await vectorStore.similaritySearch('', 1000); // Fetch all documents
+    const filteredResults = results.filter((doc: any) => doc.metadata.sessionId === sessionId);
+
+    const documents = filteredResults.map((doc: any) => ({
+      id: doc.metadata.documentId,
+      name: doc.metadata.filename,
+    }));
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ documents }),
+    };
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to fetch documents', details: error.message }),
     };
   }
 };
