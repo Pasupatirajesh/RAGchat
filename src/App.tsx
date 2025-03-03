@@ -287,7 +287,9 @@ import { ChatOpenAI } from "@langchain/openai";
 import { FileUpload } from './components/FileUpload';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_BASE_URL = "http://localhost:8888/.netlify/functions/api";
+// const API_BASE_URL = "http://localhost:8888/.netlify/functions/api";
+const API_BASE_URL = "https://glowing-bavarois-afec96.netlify.app/.netlify/functions/api";
+
 
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
