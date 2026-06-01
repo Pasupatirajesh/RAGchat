@@ -1,0 +1,316 @@
+
+up to date, audited 742 packages in 15s
+
+109 packages are looking for funding
+  run `npm fund` for details
+
+# npm audit report
+
+ai  <=5.0.51 || 7.0.0-beta.0 - 7.0.0-beta.1-gr2m-test
+Severity: moderate
+Depends on vulnerable versions of @ai-sdk/provider-utils
+Vercel’s AI SDK's filetype whitelists can be bypassed when uploading files - https://github.com/advisories/GHSA-rwvc-j5jr-mgvh
+Depends on vulnerable versions of jsondiffpatch
+Depends on vulnerable versions of nanoid
+Depends on vulnerable versions of sswr
+Depends on vulnerable versions of svelte
+fix available via `npm audit fix --force`
+Will install ai@6.0.175, which is a breaking change
+node_modules/ai
+
+cookie  <0.7.0
+cookie accepts cookie name, path, and domain with out of bounds characters - https://github.com/advisories/GHSA-pxg6-pf52-xh8x
+fix available via `npm audit fix --force`
+Will install @supabase/ssr@0.10.3, which is a breaking change
+node_modules/cookie
+  @supabase/ssr  <=0.5.2-rc.7
+  Depends on vulnerable versions of cookie
+  node_modules/@supabase/ssr
+
+effect  <3.20.0
+Severity: high
+Effect `AsyncLocalStorage` context lost/contaminated inside Effect fibers under concurrent load with RPC - https://github.com/advisories/GHSA-38f7-945m-qr2g
+fix available via `npm audit fix`
+node_modules/effect
+  @uploadthing/shared  >=6.7.6-canary.06f1714
+  Depends on vulnerable versions of effect
+  node_modules/@uploadthing/shared
+    @uploadthing/react  5.6.1-canary.8c1c98d || 6.3.3-canary.1bafd62 - 6.3.3 || 6.4.2-canary.02ff941 - 6.4.2-canary.d850078 || >=6.4.3-canary.07cdbe0
+    Depends on vulnerable versions of @uploadthing/dropzone
+    Depends on vulnerable versions of @uploadthing/shared
+    Depends on vulnerable versions of uploadthing
+    node_modules/@uploadthing/react
+    uploadthing  4.1.1-canary.102891b - 4.1.1-canary.166c330 || 6.5.1-canary.1bafd62 - 6.5.1 || >=6.12.1-canary.06f1714
+    Depends on vulnerable versions of @uploadthing/shared
+    Depends on vulnerable versions of effect
+    node_modules/uploadthing
+
+jsondiffpatch  <0.7.2
+Severity: moderate
+jsondiffpatch is vulnerable to Cross-site Scripting (XSS) via HtmlFormatter::nodeBegin - https://github.com/advisories/GHSA-33vc-wfww-vjfv
+fix available via `npm audit fix --force`
+Will install ai@6.0.175, which is a breaking change
+node_modules/jsondiffpatch
+
+nanoid  <3.3.8 || >=4.0.0 <5.0.9
+Severity: moderate
+Predictable results in nanoid generation when given non-integer values - https://github.com/advisories/GHSA-mwcw-c2x4-8c55
+Predictable results in nanoid generation when given non-integer values - https://github.com/advisories/GHSA-mwcw-c2x4-8c55
+fix available via `npm audit fix --force`
+Will install ai@6.0.175, which is a breaking change
+node_modules/@ai-sdk/provider-utils/node_modules/nanoid
+node_modules/@uppy/core/node_modules/nanoid
+node_modules/@uppy/dashboard/node_modules/nanoid
+node_modules/@uppy/provider-views/node_modules/nanoid
+node_modules/ai/node_modules/nanoid
+  @ai-sdk/provider-utils  <=1.0.20
+  Depends on vulnerable versions of nanoid
+  node_modules/@ai-sdk/provider-utils
+  @uppy/core  3.0.0-beta - 4.0.0-beta.12
+  Depends on vulnerable versions of nanoid
+  node_modules/@uppy/core
+    @uppy/companion-client  3.7.1 - 3.8.2 || 4.5.0
+    Depends on vulnerable versions of @uppy/core
+    node_modules/@uppy/companion-client
+      @uppy/tus  1.5.3 || 3.0.0-beta - 3.5.5 || 4.3.0
+      Depends on vulnerable versions of @uppy/companion-client
+      Depends on vulnerable versions of @uppy/core
+      node_modules/@uppy/tus
+      @uppy/xhr-upload  1.5.0 || 3.0.0-beta - 3.6.8 || 4.4.0
+      Depends on vulnerable versions of @uppy/companion-client
+      Depends on vulnerable versions of @uppy/core
+      node_modules/@uppy/xhr-upload
+    @uppy/dashboard  1.6.0 || 3.0.0-beta - 4.0.0-beta.11 || 4.4.0
+    Depends on vulnerable versions of @uppy/core
+    Depends on vulnerable versions of @uppy/informer
+    Depends on vulnerable versions of @uppy/provider-views
+    Depends on vulnerable versions of @uppy/status-bar
+    Depends on vulnerable versions of @uppy/thumbnail-generator
+    Depends on vulnerable versions of nanoid
+    node_modules/@uppy/dashboard
+      @uppy/react  1.4.3 || 3.0.0-beta - 3.4.0 || 4.5.0
+      Depends on vulnerable versions of @uppy/core
+      Depends on vulnerable versions of @uppy/dashboard
+      Depends on vulnerable versions of @uppy/drag-drop
+      Depends on vulnerable versions of @uppy/file-input
+      Depends on vulnerable versions of @uppy/progress-bar
+      Depends on vulnerable versions of @uppy/status-bar
+      node_modules/@uppy/react
+    @uppy/drag-drop  3.0.0-beta - 3.1.1 || 4.2.0
+    Depends on vulnerable versions of @uppy/core
+    node_modules/@uppy/drag-drop
+    @uppy/file-input  3.0.0-beta - 3.1.2 || 4.2.0
+    Depends on vulnerable versions of @uppy/core
+    node_modules/@uppy/file-input
+    @uppy/informer  3.0.0-beta - 3.1.0 || 4.3.0
+    Depends on vulnerable versions of @uppy/core
+    node_modules/@uppy/informer
+    @uppy/progress-bar  3.0.0-beta - 3.1.1 || 4.3.0
+    Depends on vulnerable versions of @uppy/core
+    node_modules/@uppy/progress-bar
+    @uppy/provider-views  3.0.0-beta - 4.0.0-beta.11 || 4.5.0
+    Depends on vulnerable versions of @uppy/core
+    Depends on vulnerable versions of nanoid
+    node_modules/@uppy/provider-views
+    @uppy/status-bar  3.0.0-beta - 3.3.3 || 4.2.0
+    Depends on vulnerable versions of @uppy/core
+    node_modules/@uppy/status-bar
+    @uppy/thumbnail-generator  3.0.0-beta - 3.1.0 || 4.2.0
+    Depends on vulnerable versions of @uppy/core
+    node_modules/@uppy/thumbnail-generator
+
+next  9.3.4-canary.0 - 16.3.0-canary.5
+Severity: high
+Next.js self-hosted applications vulnerable to DoS via Image Optimizer remotePatterns configuration - https://github.com/advisories/GHSA-9g9p-9gw9-jx7f
+Next.js HTTP request deserialization can lead to DoS when using insecure React Server Components - https://github.com/advisories/GHSA-h25m-26qc-wcjf
+Next.js: HTTP request smuggling in rewrites - https://github.com/advisories/GHSA-ggv3-7p47-pfv8
+Next.js: Unbounded next/image disk cache growth can exhaust storage - https://github.com/advisories/GHSA-3x4c-7xq6-9pq8
+Next.js has a Denial of Service with Server Components - https://github.com/advisories/GHSA-q4gf-8mx6-v5v3
+Depends on vulnerable versions of postcss
+fix available via `npm audit fix --force`
+Will install next@16.2.5, which is a breaking change
+node_modules/next
+
+pdfjs-dist  <=4.7.76
+Severity: high
+PDF.js vulnerable to arbitrary JavaScript execution upon opening a malicious PDF - https://github.com/advisories/GHSA-wgrm-67xf-hhpq
+Depends on vulnerable versions of canvas
+No fix available
+node_modules/pdfjs-dist
+  @react-pdf-viewer/core  *
+  Depends on vulnerable versions of pdfjs-dist
+  node_modules/@react-pdf-viewer/core
+    @react-pdf-viewer/attachment  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/attachment
+    @react-pdf-viewer/bookmark  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/bookmark
+    @react-pdf-viewer/default-layout  *
+    Depends on vulnerable versions of @react-pdf-viewer/attachment
+    Depends on vulnerable versions of @react-pdf-viewer/bookmark
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    Depends on vulnerable versions of @react-pdf-viewer/thumbnail
+    Depends on vulnerable versions of @react-pdf-viewer/toolbar
+    node_modules/@react-pdf-viewer/default-layout
+    @react-pdf-viewer/full-screen  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/full-screen
+    @react-pdf-viewer/get-file  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/get-file
+    @react-pdf-viewer/open  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/open
+    @react-pdf-viewer/page-navigation  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/page-navigation
+    @react-pdf-viewer/print  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/print
+    @react-pdf-viewer/properties  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/properties
+    @react-pdf-viewer/rotate  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/rotate
+    @react-pdf-viewer/scroll-mode  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/scroll-mode
+    @react-pdf-viewer/search  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/search
+    @react-pdf-viewer/selection-mode  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/selection-mode
+    @react-pdf-viewer/theme  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/theme
+      @react-pdf-viewer/toolbar  *
+      Depends on vulnerable versions of @react-pdf-viewer/core
+      Depends on vulnerable versions of @react-pdf-viewer/full-screen
+      Depends on vulnerable versions of @react-pdf-viewer/get-file
+      Depends on vulnerable versions of @react-pdf-viewer/open
+      Depends on vulnerable versions of @react-pdf-viewer/page-navigation
+      Depends on vulnerable versions of @react-pdf-viewer/print
+      Depends on vulnerable versions of @react-pdf-viewer/properties
+      Depends on vulnerable versions of @react-pdf-viewer/rotate
+      Depends on vulnerable versions of @react-pdf-viewer/scroll-mode
+      Depends on vulnerable versions of @react-pdf-viewer/search
+      Depends on vulnerable versions of @react-pdf-viewer/selection-mode
+      Depends on vulnerable versions of @react-pdf-viewer/theme
+      Depends on vulnerable versions of @react-pdf-viewer/zoom
+      node_modules/@react-pdf-viewer/toolbar
+    @react-pdf-viewer/thumbnail  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/thumbnail
+    @react-pdf-viewer/zoom  *
+    Depends on vulnerable versions of @react-pdf-viewer/core
+    node_modules/@react-pdf-viewer/zoom
+
+postcss  <8.5.10
+Severity: moderate
+PostCSS has XSS via Unescaped </style> in its CSS Stringify Output - https://github.com/advisories/GHSA-qx2v-qp2m-jg93
+fix available via `npm audit fix --force`
+Will install next@16.2.5, which is a breaking change
+node_modules/next/node_modules/postcss
+node_modules/styled-components/node_modules/postcss
+  styled-components  6.1.3 - 6.4.0-prerelease.14
+  Depends on vulnerable versions of postcss
+  node_modules/styled-components
+
+svelte  <=5.53.4
+Severity: moderate
+Svelte SSR attribute spreading includes inherited properties from prototype chain - https://github.com/advisories/GHSA-crpf-4hrx-3jrp
+Svelte SSR does not validate dynamic element tag names in `<svelte:element>` - https://github.com/advisories/GHSA-m56q-vw4c-c2cp
+Svelte affected by cross-site scripting via spread attributes in Svelte SSR - https://github.com/advisories/GHSA-f7gr-6p89-r883
+Svelte vulnerable to XSS during SSR with contenteditable `bind:innerText` and `bind:textContent` - https://github.com/advisories/GHSA-phwv-c562-gvmh
+fix available via `npm audit fix --force`
+Will install ai@6.0.175, which is a breaking change
+node_modules/svelte
+  @uploadthing/dropzone  >=0.2.2-canary.02ff941
+  Depends on vulnerable versions of svelte
+  node_modules/@uploadthing/dropzone
+  @vercel/speed-insights  1.0.5-beta.1 - 1.0.12
+  Depends on vulnerable versions of svelte
+  node_modules/@vercel/speed-insights
+  sswr  <=2.0.0
+  Depends on vulnerable versions of svelte
+  node_modules/sswr
+
+tar  <=7.5.10
+Severity: high
+node-tar Vulnerable to Arbitrary File Creation/Overwrite via Hardlink Path Traversal - https://github.com/advisories/GHSA-34x7-hfp2-rc4v
+node-tar is Vulnerable to Arbitrary File Overwrite and Symlink Poisoning via Insufficient Path Sanitization - https://github.com/advisories/GHSA-8qq5-rm4j-mr97
+Arbitrary File Read/Write via Hardlink Target Escape Through Symlink Chain in node-tar Extraction - https://github.com/advisories/GHSA-83g3-92jg-28cx
+tar has Hardlink Path Traversal via Drive-Relative Linkpath - https://github.com/advisories/GHSA-qffp-2rhf-9h96
+node-tar Symlink Path Traversal via Drive-Relative Linkpath - https://github.com/advisories/GHSA-9ppj-qmqm-q256
+Race Condition in node-tar Path Reservations via Unicode Ligature Collisions on macOS APFS - https://github.com/advisories/GHSA-r6q2-hw4h-h46w
+No fix available
+node_modules/tar
+  @mapbox/node-pre-gyp  <=1.0.11
+  Depends on vulnerable versions of tar
+  node_modules/@mapbox/node-pre-gyp
+    canvas  2.8.0 - 2.11.2
+    Depends on vulnerable versions of @mapbox/node-pre-gyp
+    node_modules/canvas
+
+undici  <=6.23.0
+Severity: high
+Use of Insufficiently Random Values in undici - https://github.com/advisories/GHSA-c76h-2ccp-4975
+Undici has an unbounded decompression chain in HTTP responses on Node.js Fetch API via Content-Encoding leads to resource exhaustion - https://github.com/advisories/GHSA-g9mf-h72j-4rw9
+undici Denial of Service attack via bad certificate data - https://github.com/advisories/GHSA-cxrh-j4jr-qwg3
+Undici: Malicious WebSocket 64-bit length overflows parser and crashes the client - https://github.com/advisories/GHSA-f269-vfmq-vjvj
+Undici has an HTTP Request/Response Smuggling issue - https://github.com/advisories/GHSA-2mjp-6q6p-2qxm
+Undici has Unbounded Memory Consumption in WebSocket permessage-deflate Decompression - https://github.com/advisories/GHSA-vrm6-8vpv-qv8q
+Undici has Unhandled Exception in WebSocket Client Due to Invalid server_max_window_bits Validation - https://github.com/advisories/GHSA-v9p9-hfj2-hcw8
+Undici has CRLF Injection in undici via `upgrade` option - https://github.com/advisories/GHSA-4992-7rv2-5pvq
+fix available via `npm audit fix`
+node_modules/undici
+  @firebase/auth  1.7.7-20240813205648 - 1.7.7-canary.1ff9661af || 1.7.8-20240827161511 - 1.7.9
+  Depends on vulnerable versions of undici
+  node_modules/@firebase/auth-compat/node_modules/@firebase/auth
+  node_modules/firebase/node_modules/@firebase/auth
+    firebase  0.900.22 || 7.9.1-0 - 7.9.1-canary.0396117e || 8.10.0-20217172214 - 8.10.0-canary.f40c0db53 || 9.0.0-20217250818 - 9.0.0-canary.d0d3acb10 || 9.0.1-2021727231341 - 9.0.1-canary.e039e1472 || 9.0.2-2021891633 - 9.0.2-canary.ff9baf70c || 9.0.3-202181503543 - 9.1.0-canary.f7d8324a1 || 9.1.1-2021830195733 - 9.1.1-canary.e70de6201 || 9.1.2-20219523556 - 9.1.2-canary.fc1d36497 || 9.22.1-20230524195328 || 10.12.2-20240523185724 - 10.12.2-canary.872e6f63e || 10.13.0-20240813205648 - 10.13.0-canary.fa0ed08fb || 10.13.1-20240827161511 - 10.14.1 || 11.9.0-20250603144652 - 11.9.0-canary.5871fd656
+    Depends on vulnerable versions of @firebase/auth
+    Depends on vulnerable versions of @firebase/auth-compat
+    Depends on vulnerable versions of @firebase/firestore
+    Depends on vulnerable versions of @firebase/firestore-compat
+    Depends on vulnerable versions of @firebase/functions
+    Depends on vulnerable versions of @firebase/functions-compat
+    Depends on vulnerable versions of @firebase/storage
+    Depends on vulnerable versions of @firebase/storage-compat
+    node_modules/firebase
+  @firebase/auth-compat  0.5.12-20240813205648 - 0.5.12-canary.fa0ed08fb || 0.5.13-20240827161511 - 0.5.14
+  Depends on vulnerable versions of @firebase/auth
+  Depends on vulnerable versions of undici
+  node_modules/@firebase/auth-compat
+  @firebase/firestore  4.7.0-20240813205648 - 4.7.0-canary.fa0ed08fb || 4.7.1-20240827161511 - 4.7.3
+  Depends on vulnerable versions of undici
+  node_modules/@firebase/firestore
+    @firebase/firestore-compat  <=0.0.900-exp.520ca39d0 || 0.3.25-20240130223218 - 0.3.25-20240131233318 || 0.3.30-20240424141009 - 0.3.30-dataconnect-preview.f2ddc3d7b || 0.3.35-20240813205648 - 0.3.35-canary.fa0ed08fb || 0.3.36-20240827161511 - 0.3.38
+    Depends on vulnerable versions of @firebase/firestore
+    node_modules/@firebase/firestore-compat
+  @firebase/functions  0.11.7-20240827161511 - 0.11.8
+  Depends on vulnerable versions of undici
+  node_modules/@firebase/functions
+    @firebase/functions-compat  0.3.13-20240827161511 - 0.3.14
+    Depends on vulnerable versions of @firebase/functions
+    node_modules/@firebase/functions-compat
+  @firebase/storage  0.13.0-20240814182916 - 0.13.0-canary.fa0ed08fb || 0.13.1-20240827161511 - 0.13.2
+  Depends on vulnerable versions of undici
+  node_modules/@firebase/storage
+    @firebase/storage-compat  <=0.0.900-exp.520ca39d0 || 0.1.4-202192711727 - 0.1.4-canary.f27fe4304 || 0.3.10-20240814182916 - 0.3.10-canary.fa0ed08fb || 0.3.11-20240827161511 - 0.3.12
+    Depends on vulnerable versions of @firebase/storage
+    node_modules/@firebase/storage-compat
+
+62 vulnerabilities (2 low, 32 moderate, 28 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
