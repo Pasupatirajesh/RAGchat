@@ -3,6 +3,7 @@ import cors from "cors";
 import { Pinecone as PineconeClient } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
 import { OpenAIEmbeddings } from "@langchain/openai";
+import { OpenAI } from "openai";
 import multer from "multer";
 import dotenv from "dotenv";
 import * as fs from 'fs';
@@ -33,8 +34,54 @@ const embeddings = new OpenAIEmbeddings({
   modelName: "text-embedding-ada-002",
 });
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Tavily Web Search helper
+const searchWeb = async (query) => {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query,
+        search_depth: "basic",
+        include_answer: false,
+        max_results: 5,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Tavily search failed:", response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data.results || data.results.length === 0) return null;
+
+    return data.results.map((r) => ({
+      pageContent: r.content || r.snippet || "",
+      metadata: {
+        source: "web",
+        title: r.title || "Web result",
+        url: r.url || "",
+        chunkIndex: -1,
+      },
+    }));
+  } catch (error) {
+    console.error("Error during web search:", error);
+    return null;
+  }
+};
+
 let vectorStore;
 const DOCUMENTS_FILE = path.join(__dirname, 'documents.json');
+const CONVERSATIONS_FILE = path.join(__dirname, 'conversations.json');
 
 const loadDocuments = () => {
   try {
@@ -53,6 +100,26 @@ const saveDocuments = (docs) => {
     fs.writeFileSync(DOCUMENTS_FILE, JSON.stringify(docs, null, 2));
   } catch (error) {
     console.error("Error saving documents file:", error);
+  }
+};
+
+const loadConversations = () => {
+  try {
+    if (fs.existsSync(CONVERSATIONS_FILE)) {
+      const data = fs.readFileSync(CONVERSATIONS_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error("Error loading conversations file:", error);
+  }
+  return [];
+};
+
+const saveConversations = (conversations) => {
+  try {
+    fs.writeFileSync(CONVERSATIONS_FILE, JSON.stringify(conversations, null, 2));
+  } catch (error) {
+    console.error("Error saving conversations file:", error);
   }
 };
 
@@ -129,10 +196,10 @@ app.post("/upload", upload.single('document'), async (req, res) => {
     });
     const chunks = await textSplitter.createDocuments([extractedText]);
 
-    // Attach metadata to each chunk
-    const documents = chunks.map((chunk) => ({
+    // Attach metadata to each chunk with index
+    const documents = chunks.map((chunk, index) => ({
       pageContent: chunk.pageContent,
-      metadata: { filename: file.originalname, documentId },
+      metadata: { filename: file.originalname, documentId, chunkIndex: index },
     }));
 
     await vectorStore.addDocuments(documents);
@@ -195,6 +262,164 @@ app.post("/query", async (req, res) => {
   } catch (error) {
     console.error("Error during similarity search:", error);
     res.status(500).json({ error: "Failed to perform similarity search", details: error.message });
+  }
+});
+
+// Chat Endpoint (SSE Streaming with Sources)
+app.post("/chat", async (req, res) => {
+  const { query, documentId, documentName, sessionId, conversationId: existingConversationId } = req.body;
+
+  if (!query) {
+    return res.status(400).json({ error: "Query is required" });
+  }
+
+  try {
+    // 1. Search for relevant chunks in the document
+    const filter = documentId ? { documentId: { $eq: documentId } } : undefined;
+    const searchResultsWithScore = await vectorStore.similaritySearchWithScore(query, 5, filter);
+
+    // Only keep chunks with a relevance score above threshold
+    const SCORE_THRESHOLD = 0.8;
+    let sources = searchResultsWithScore
+      .filter(([_, score]) => score >= SCORE_THRESHOLD)
+      .map(([doc]) => ({
+        pageContent: doc.pageContent,
+        metadata: doc.metadata,
+      }));
+
+    console.log(`[Chat] Found ${searchResultsWithScore.length} chunks, ${sources.length} above score ${SCORE_THRESHOLD} for query: "${query}"`);
+    if (searchResultsWithScore.length > 0) {
+      console.log(`[Chat] Top scores: ${searchResultsWithScore.map(([_, s]) => s.toFixed(3)).join(', ')}`);
+    }
+
+    let contextOrigin = "document";
+
+    // 2. Fallback to web search if document has no relevant chunks
+    if (sources.length === 0 && process.env.TAVILY_API_KEY) {
+      console.log(`[Chat] No document chunks found. Falling back to web search for: "${query}"`);
+      const webResults = await searchWeb(query);
+      if (webResults && webResults.length > 0) {
+        sources = webResults;
+        contextOrigin = "web";
+      }
+    }
+
+    const relevantChunks = sources.map((s) => s.pageContent).join("\n\n");
+
+    // 3. Build system prompt
+    let systemPromptContent;
+    if (contextOrigin === "web") {
+      systemPromptContent = `You are an AI assistant answering questions. The uploaded document did not contain relevant information, so web search results are provided below. Use these web results to answer the question. Cite sources naturally (e.g., "According to..."). If the web results still don't answer the question, say so.
+
+Web search results:\n${relevantChunks}`;
+    } else {
+      systemPromptContent = `You are an AI assistant answering questions about the uploaded document: "${documentName || 'Document'}".
+Use only the context provided below to answer. You may summarize, paraphrase, or infer straightforward relationships from the text, but do NOT introduce facts, names, or details that are not present in the context. If the context truly does not contain enough information to answer the question, reply with: "I could not find relevant information in the document."
+
+Context:\n${relevantChunks}`;
+    }
+
+    const systemPrompt = {
+      role: "system",
+      content: systemPromptContent,
+    };
+
+    const messagesForOpenAI = [systemPrompt, { role: "user", content: query }];
+
+    // 3. Setup SSE
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    });
+
+    // 4. Stream LLM response
+    const stream = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: messagesForOpenAI,
+      stream: true,
+    });
+
+    let fullContent = "";
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content || "";
+      if (delta) {
+        fullContent += delta;
+        res.write(`data: ${JSON.stringify({ type: "token", content: delta })}\n\n`);
+      }
+    }
+
+    // 5. Send sources as final event
+    res.write(`data: ${JSON.stringify({ type: "sources", sources })}\n\n`);
+
+    // 6. Send done event
+    res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+    res.end();
+
+    // 7. Persist conversation asynchronously (after response is sent)
+    try {
+      const conversations = loadConversations();
+      let conversation;
+
+      if (existingConversationId) {
+        conversation = conversations.find((c) => c.id === existingConversationId);
+      }
+
+      if (!conversation) {
+        conversation = {
+          id: existingConversationId || crypto.randomUUID(),
+          sessionId: sessionId || "anonymous",
+          documentId,
+          documentName: documentName || null,
+          createdAt: new Date().toISOString(),
+          messages: [],
+        };
+        conversations.push(conversation);
+      }
+
+      conversation.messages.push(
+        { role: "user", content: query, sources: [] },
+        { role: "assistant", content: fullContent, sources }
+      );
+
+      saveConversations(conversations);
+    } catch (persistError) {
+      console.error("Error persisting conversation:", persistError);
+    }
+  } catch (error) {
+    console.error("Error during chat:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Failed to generate response", details: error.message }));
+  }
+});
+
+// Conversations Endpoint (Lists conversations for a session)
+app.get("/conversations", async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId;
+    const conversations = loadConversations();
+    const filtered = sessionId
+      ? conversations.filter((c) => c.sessionId === sessionId)
+      : conversations;
+    res.json({ conversations: filtered });
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    res.status(500).json({ error: "Failed to fetch conversations" });
+  }
+});
+
+// Single Conversation Endpoint (Gets messages for a conversation)
+app.get("/conversations/:id", async (req, res) => {
+  try {
+    const conversations = loadConversations();
+    const conversation = conversations.find((c) => c.id === req.params.id);
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    res.json({ conversation });
+  } catch (error) {
+    console.error("Error fetching conversation:", error);
+    res.status(500).json({ error: "Failed to fetch conversation" });
   }
 });
 
