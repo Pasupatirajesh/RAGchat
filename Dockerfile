@@ -1,45 +1,26 @@
 # syntax = docker/dockerfile:1
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=20.18.0
-FROM node:${NODE_VERSION}-slim AS base
+FROM node:20-slim
 
-LABEL fly_launch_runtime="Remix"
-
-# Remix app lives here
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
-
-
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build node modules
+# Install build tools needed by native dependencies (pdf-parse, etc.)
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
+    apt-get install --no-install-recommends -y build-essential && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install node modules
+# Copy package files and install production dependencies
 COPY package-lock.json package.json ./
-RUN npm ci --include=dev
+RUN npm ci --omit=dev
 
 # Copy application code
 COPY . .
 
-# Build application
-RUN npm run build
+# Ensure uploads directory exists
+RUN mkdir -p uploads
 
-# Remove development dependencies
-RUN npm prune --omit=dev
-
-
-# Final stage for app image
-FROM nginx
-
-# Copy built application
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Start the server by default, this can be overwritten at runtime
+# Expose the port Express listens on
 EXPOSE 3000
-CMD [ "/usr/sbin/nginx", "-g", "daemon off;" ]
+
+# Start the backend server
+CMD ["node", "server.js"]

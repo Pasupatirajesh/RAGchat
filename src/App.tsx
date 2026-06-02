@@ -5,7 +5,7 @@ import { Message, Source } from './types';
 import { FileUpload } from './components/FileUpload';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
 interface Conversation {
   id: string;
