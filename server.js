@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,17 @@ app.use(cors({ origin: FRONTEND_URL }));
 app.use(express.json());
 
 const upload = multer({ dest: 'uploads/' });
+
+// Initialize Supabase client (backend uses service role key for full access)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+let supabase;
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log("Supabase client initialized");
+} else {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_KEY - persistence will fail");
+}
 
 // Initialize Pinecone and Embeddings
 const pineconeClient = new PineconeClient();
@@ -81,50 +93,6 @@ const searchWeb = async (query) => {
 };
 
 let vectorStore;
-const DOCUMENTS_FILE = path.join(__dirname, 'documents.json');
-const CONVERSATIONS_FILE = path.join(__dirname, 'conversations.json');
-
-const loadDocuments = () => {
-  try {
-    if (fs.existsSync(DOCUMENTS_FILE)) {
-      const data = fs.readFileSync(DOCUMENTS_FILE, 'utf-8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error("Error loading documents file:", error);
-  }
-  return [];
-};
-
-const saveDocuments = (docs) => {
-  try {
-    fs.writeFileSync(DOCUMENTS_FILE, JSON.stringify(docs, null, 2));
-  } catch (error) {
-    console.error("Error saving documents file:", error);
-  }
-};
-
-const loadConversations = () => {
-  try {
-    if (fs.existsSync(CONVERSATIONS_FILE)) {
-      const data = fs.readFileSync(CONVERSATIONS_FILE, 'utf-8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error("Error loading conversations file:", error);
-  }
-  return [];
-};
-
-const saveConversations = (conversations) => {
-  try {
-    fs.writeFileSync(CONVERSATIONS_FILE, JSON.stringify(conversations, null, 2));
-  } catch (error) {
-    console.error("Error saving conversations file:", error);
-  }
-};
-
-const documentsStore = loadDocuments();
 
 const initVectorStore = async () => {
   try {
@@ -140,12 +108,11 @@ const initVectorStore = async () => {
 
 initVectorStore();
 
-// Function to Extract Text from File (Now in Backend)
+// Function to Extract Text from File
 const extractTextFromFile = async (file) => {
   try {
     const ext = path.extname(file.originalname).toLowerCase();
 
-    // Handle by extension or mimetype
     if (ext === '.txt' || ext === '.md' || file.mimetype === 'text/plain' || file.mimetype === 'text/markdown') {
       return fs.readFileSync(file.path, 'utf-8');
     } else if (ext === '.pdf' || file.mimetype === 'application/pdf') {
@@ -164,7 +131,7 @@ const extractTextFromFile = async (file) => {
   }
 };
 
-// Pinecone Connection Endpoint (No changes needed)
+// Pinecone Connection Endpoint
 app.get("/pinecone", async (req, res) => {
   try {
     res.json({ message: "Connected to Pinecone", index: pineconeIndex.name });
@@ -174,7 +141,7 @@ app.get("/pinecone", async (req, res) => {
   }
 });
 
-// Upload Endpoint (Handles File Upload, Extraction, Chunking, and Vector Store Addition)
+// Upload Endpoint
 app.post("/upload", upload.single('document'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file uploaded" });
@@ -190,14 +157,14 @@ app.post("/upload", upload.single('document'), async (req, res) => {
 
     const documentId = crypto.randomUUID();
 
-    // Split text into chunks for better retrieval accuracy
+    // Split text into chunks
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: 1000,
       chunkOverlap: 200,
     });
     const chunks = await textSplitter.createDocuments([extractedText]);
 
-    // Attach metadata to each chunk with index
+    // Attach metadata to each chunk
     const documents = chunks.map((chunk, index) => ({
       pageContent: chunk.pageContent,
       metadata: { filename: file.originalname, documentId, chunkIndex: index },
@@ -206,16 +173,19 @@ app.post("/upload", upload.single('document'), async (req, res) => {
     await vectorStore.addDocuments(documents);
     console.log(`[Upload] Stored ${documents.length} chunks for documentId=${documentId}, filename=${file.originalname}`);
 
-    documentsStore.push({ id: documentId, name: file.originalname });
-    saveDocuments(documentsStore);
-
-    // Clean up the uploaded file after processing
-    fs.unlink(file.path, (err) => {
-      if (err) {
-        console.error("Error deleting file:", err);
-      } else {
-        console.log("File deleted successfully");
+    // Save document metadata to Supabase
+    if (supabase) {
+      const { error } = await supabase
+        .from('documents')
+        .insert([{ id: documentId, name: file.originalname }]);
+      if (error) {
+        console.error("Error saving document to Supabase:", error);
       }
+    }
+
+    // Clean up uploaded file
+    fs.unlink(file.path, (err) => {
+      if (err) console.error("Error deleting file:", err);
     });
 
     res.json({ message: "Document processed and added to vector store successfully", documentId });
@@ -228,14 +198,27 @@ app.post("/upload", upload.single('document'), async (req, res) => {
 // Documents Endpoint (Lists uploaded documents)
 app.get("/documents", async (req, res) => {
   try {
-    res.json({ documents: documentsStore });
+    if (!supabase) {
+      return res.status(500).json({ error: "Supabase not configured" });
+    }
+    const { data: documents, error } = await supabase
+      .from('documents')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching documents:", error);
+      return res.status(500).json({ error: "Failed to fetch documents", details: error.message });
+    }
+
+    res.json({ documents: documents || [] });
   } catch (error) {
     console.error("Error fetching documents:", error);
     res.status(500).json({ error: "Failed to fetch documents", details: error.message });
   }
 });
 
-// Query Endpoint (Performs Similarity Search)
+// Query Endpoint
 app.post("/query", async (req, res) => {
   const { query, documentId } = req.body;
 
@@ -244,19 +227,14 @@ app.post("/query", async (req, res) => {
   }
 
   try {
-    // Search only within vectors belonging to the selected document
     const filter = documentId ? { documentId: { $eq: documentId } } : undefined;
     console.log(`[Query] documentId=${documentId}, filter=${JSON.stringify(filter)}, query="${query}"`);
     let results = await vectorStore.similaritySearch(query, 5, filter);
     console.log(`[Query] Filtered results count: ${results.length}`);
 
-    // Fallback: if filtered search returns nothing, try unfiltered
     if (results.length === 0 && documentId) {
       const unfilteredResults = await vectorStore.similaritySearch(query, 5);
       console.log(`[Query] Unfiltered results count: ${unfilteredResults.length}`);
-      if (unfilteredResults.length > 0) {
-        console.log(`[Query] First unfiltered result metadata:`, unfilteredResults[0].metadata);
-      }
     }
 
     res.json({ results });
@@ -275,11 +253,10 @@ app.post("/chat", async (req, res) => {
   }
 
   try {
-    // 1. Search for relevant chunks in the document
+    // Search for relevant chunks
     const filter = documentId ? { documentId: { $eq: documentId } } : undefined;
     const searchResultsWithScore = await vectorStore.similaritySearchWithScore(query, 5, filter);
 
-    // Only keep chunks with a relevance score above threshold
     const SCORE_THRESHOLD = 0.8;
     let sources = searchResultsWithScore
       .filter(([_, score]) => score >= SCORE_THRESHOLD)
@@ -289,13 +266,9 @@ app.post("/chat", async (req, res) => {
       }));
 
     console.log(`[Chat] Found ${searchResultsWithScore.length} chunks, ${sources.length} above score ${SCORE_THRESHOLD} for query: "${query}"`);
-    if (searchResultsWithScore.length > 0) {
-      console.log(`[Chat] Top scores: ${searchResultsWithScore.map(([_, s]) => s.toFixed(3)).join(', ')}`);
-    }
 
     let contextOrigin = "document";
 
-    // 2. Fallback to web search if document has no relevant chunks
     if (sources.length === 0 && process.env.TAVILY_API_KEY) {
       console.log(`[Chat] No document chunks found. Falling back to web search for: "${query}"`);
       const webResults = await searchWeb(query);
@@ -307,7 +280,7 @@ app.post("/chat", async (req, res) => {
 
     const relevantChunks = sources.map((s) => s.pageContent).join("\n\n");
 
-    // 3. Build system prompt
+    // Build system prompt
     let systemPromptContent;
     if (contextOrigin === "web") {
       systemPromptContent = `You are an AI assistant answering questions. The uploaded document did not contain relevant information, so web search results are provided below. Use these web results to answer the question. Cite sources naturally (e.g., "According to..."). If the web results still don't answer the question, say so.
@@ -327,14 +300,14 @@ Context:\n${relevantChunks}`;
 
     const messagesForOpenAI = [systemPrompt, { role: "user", content: query }];
 
-    // 3. Setup SSE
+    // Setup SSE
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
     });
 
-    // 4. Stream LLM response
+    // Stream LLM response
     const stream = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: messagesForOpenAI,
@@ -350,42 +323,64 @@ Context:\n${relevantChunks}`;
       }
     }
 
-    // 5. Send sources as final event
+    // Send sources as final event
     res.write(`data: ${JSON.stringify({ type: "sources", sources })}\n\n`);
 
-    // 6. Send done event
+    // Send done event
     res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
     res.end();
 
-    // 7. Persist conversation asynchronously (after response is sent)
-    try {
-      const conversations = loadConversations();
-      let conversation;
+    // Persist conversation asynchronously to Supabase
+    if (supabase) {
+      try {
+        let conversationId = existingConversationId;
+        let existingMessages = [];
 
-      if (existingConversationId) {
-        conversation = conversations.find((c) => c.id === existingConversationId);
+        // If conversation exists, fetch current messages
+        if (conversationId) {
+          const { data: existingConv } = await supabase
+            .from('conversations')
+            .select('messages')
+            .eq('id', conversationId)
+            .single();
+          if (existingConv) {
+            existingMessages = existingConv.messages || [];
+          }
+        } else {
+          // Create new conversation
+          conversationId = crypto.randomUUID();
+          const { error: insertError } = await supabase
+            .from('conversations')
+            .insert([{
+              id: conversationId,
+              session_id: sessionId || "anonymous",
+              document_id: documentId,
+              document_name: documentName || null,
+              messages: [],
+            }]);
+          if (insertError) {
+            console.error("Error creating conversation:", insertError);
+          }
+        }
+
+        // Append new messages
+        const updatedMessages = [
+          ...existingMessages,
+          { role: "user", content: query, sources: [] },
+          { role: "assistant", content: fullContent, sources }
+        ];
+
+        const { error: updateError } = await supabase
+          .from('conversations')
+          .update({ messages: updatedMessages })
+          .eq('id', conversationId);
+
+        if (updateError) {
+          console.error("Error updating conversation:", updateError);
+        }
+      } catch (persistError) {
+        console.error("Error persisting conversation:", persistError);
       }
-
-      if (!conversation) {
-        conversation = {
-          id: existingConversationId || crypto.randomUUID(),
-          sessionId: sessionId || "anonymous",
-          documentId,
-          documentName: documentName || null,
-          createdAt: new Date().toISOString(),
-          messages: [],
-        };
-        conversations.push(conversation);
-      }
-
-      conversation.messages.push(
-        { role: "user", content: query, sources: [] },
-        { role: "assistant", content: fullContent, sources }
-      );
-
-      saveConversations(conversations);
-    } catch (persistError) {
-      console.error("Error persisting conversation:", persistError);
     }
   } catch (error) {
     console.error("Error during chat:", error);
@@ -397,26 +392,50 @@ Context:\n${relevantChunks}`;
 // Conversations Endpoint (Lists conversations for a session)
 app.get("/conversations", async (req, res) => {
   try {
+    if (!supabase) {
+      return res.status(500).json({ error: "Supabase not configured" });
+    }
     const sessionId = req.query.sessionId;
-    const conversations = loadConversations();
-    const filtered = sessionId
-      ? conversations.filter((c) => c.sessionId === sessionId)
-      : conversations;
-    res.json({ conversations: filtered });
+
+    let query = supabase
+      .from('conversations')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (sessionId) {
+      query = query.eq('session_id', sessionId);
+    }
+
+    const { data: conversations, error } = await query;
+
+    if (error) {
+      console.error("Error fetching conversations:", error);
+      return res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+
+    res.json({ conversations: conversations || [] });
   } catch (error) {
     console.error("Error fetching conversations:", error);
     res.status(500).json({ error: "Failed to fetch conversations" });
   }
 });
 
-// Single Conversation Endpoint (Gets messages for a conversation)
+// Single Conversation Endpoint
 app.get("/conversations/:id", async (req, res) => {
   try {
-    const conversations = loadConversations();
-    const conversation = conversations.find((c) => c.id === req.params.id);
-    if (!conversation) {
+    if (!supabase) {
+      return res.status(500).json({ error: "Supabase not configured" });
+    }
+    const { data: conversation, error } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !conversation) {
       return res.status(404).json({ error: "Conversation not found" });
     }
+
     res.json({ conversation });
   } catch (error) {
     console.error("Error fetching conversation:", error);
