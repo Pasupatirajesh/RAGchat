@@ -34,6 +34,14 @@ function App() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showDemoBanner, setShowDemoBanner] = useState(() => {
+    return localStorage.getItem('demoBannerDismissed') !== 'true';
+  });
+
+  const dismissDemoBanner = () => {
+    setShowDemoBanner(false);
+    localStorage.setItem('demoBannerDismissed', 'true');
+  };
 
   const sessionId = useRef<string>(localStorage.getItem('sessionId') || uuidv4());
   useEffect(() => {
@@ -245,9 +253,31 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className={`${showSidebar ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden bg-white border-r flex flex-col`}>
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Demo Banner */}
+      {showDemoBanner && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 shadow-lg flex-shrink-0">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">👋</span>
+              <div>
+                <p className="font-semibold text-sm">Welcome to RAGchat Demo</p>
+                <p className="text-xs text-blue-100">Documents are saved per browser session. Clearing cookies or switching devices will reset your data.</p>
+              </div>
+            </div>
+            <button
+              onClick={dismissDemoBanner}
+              className="ml-4 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-md text-sm font-medium transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside className={`${showSidebar ? 'w-64' : 'w-0'} transition-all duration-300 overflow-hidden bg-white border-r flex flex-col`}>
         <div className="p-4 border-b">
           <button
             onClick={startNewChat}
@@ -351,7 +381,8 @@ function App() {
         </footer>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default App;
