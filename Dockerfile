@@ -13,6 +13,12 @@ RUN apt-get update -qq && \
 COPY package-lock.json package.json ./
 RUN npm ci --omit=dev
 
+# Patch pdf-parse self-test bug (ESM crash when test PDF is missing)
+RUN node -e "const fs=require('fs'); const f='node_modules/pdf-parse/index.js'; let c=fs.readFileSync(f,'utf8'); const m=c.match(/let\s+isDebugMode\s*=\s*([^;]+);/); if(!m){console.error('Pattern not found');process.exit(1)} console.log('Found isDebugMode =',m[1].trim()); c=c.replace(/let\s+isDebugMode\s*=\s*[^;]+;/,'let isDebugMode = false;'); fs.writeFileSync(f,c); console.log('Patched successfully');"
+
+# Verify the patch was applied
+RUN grep -q "let isDebugMode = false;" node_modules/pdf-parse/index.js || (echo "pdf-parse patch failed" && exit 1)
+
 # Copy application code
 COPY . .
 
