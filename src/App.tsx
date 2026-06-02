@@ -71,7 +71,7 @@ function App() {
 
   const fetchDocuments = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/documents`);
+      const response = await fetch(`${API_BASE_URL}/documents?sessionId=${sessionId.current}`);
       if (!response.ok) throw new Error('Failed to fetch documents');
       const result = await response.json();
       setDocuments(result.documents);
@@ -140,7 +140,9 @@ function App() {
 
     try {
       const response = await fetch(`${API_BASE_URL}/upload`, {
+        
         method: 'POST',
+        headers: { 'x-session-id': sessionId.current },
         body: formData,
       });
 

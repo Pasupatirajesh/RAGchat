@@ -175,9 +175,10 @@ app.post("/upload", upload.single('document'), async (req, res) => {
 
     // Save document metadata to Supabase
     if (supabase) {
+      const sessionId = req.headers['x-session-id'] || "anonymous";
       const { error } = await supabase
         .from('documents')
-        .insert([{ id: documentId, name: file.originalname }]);
+        .insert([{ id: documentId, name: file.originalname, session_id: sessionId}]);
       if (error) {
         console.error("Error saving document to Supabase:", error);
       }
@@ -195,16 +196,20 @@ app.post("/upload", upload.single('document'), async (req, res) => {
   }
 });
 
-// Documents Endpoint (Lists uploaded documents)
+// Documents Endpoint (Lists uploaded documents, filtered by session)
 app.get("/documents", async (req, res) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: "Supabase not configured" });
     }
-    const { data: documents, error } = await supabase
-      .from('documents')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const sessionId = req.query.sessionId;
+    let query = supabase.from('documents').select('*');
+
+    if (sessionId) {
+      query = query.eq('session_id', sessionId);
+    }
+
+    const { data: documents, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error("Error fetching documents:", error);
@@ -217,6 +222,8 @@ app.get("/documents", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch documents", details: error.message });
   }
 });
+
+
 
 // Query Endpoint
 app.post("/query", async (req, res) => {
