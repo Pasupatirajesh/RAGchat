@@ -264,15 +264,27 @@ app.post("/chat", async (req, res) => {
     const filter = documentId ? { documentId: { $eq: documentId } } : undefined;
     const searchResultsWithScore = await vectorStore.similaritySearchWithScore(query, 5, filter);
 
-    const SCORE_THRESHOLD = 0.8;
+    // const SCORE_THRESHOLD = 0.8;
+    // let sources = searchResultsWithScore
+    //   .filter(([_, score]) => score >= SCORE_THRESHOLD)
+    //   .map(([doc]) => ({
+    //     pageContent: doc.pageContent,
+    //     metadata: doc.metadata,
+    //   }));
+
+    // console.log(`[Chat] Found ${searchResultsWithScore.length} chunks, ${sources.length} above score ${SCORE_THRESHOLD} for query: "${query}"`);
+    const SCORE_THRESHOLD = 0.3;
+    console.log(
+      `[Chat] Raw scores:`,
+      searchResultsWithScore.map(([_, score]) => score.toFixed(3))
+    );
+
     let sources = searchResultsWithScore
       .filter(([_, score]) => score >= SCORE_THRESHOLD)
       .map(([doc]) => ({
         pageContent: doc.pageContent,
         metadata: doc.metadata,
       }));
-
-    console.log(`[Chat] Found ${searchResultsWithScore.length} chunks, ${sources.length} above score ${SCORE_THRESHOLD} for query: "${query}"`);
 
     let contextOrigin = "document";
 
