@@ -300,25 +300,25 @@ Use only the context provided below to answer. You may summarize, paraphrase, or
 Context:\n${relevantChunks}`;
     }
 
-    const systemPrompt = {
+       const systemPrompt = {
       role: "system",
       content: systemPromptContent,
     };
 
     const messagesForOpenAI = [systemPrompt, { role: "user", content: query }];
 
-    // Setup SSE
+    // Call OpenAI BEFORE sending 200 SSE headers so errors can return a clean 500
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: messagesForOpenAI,
+      stream: true,
+    });
+
+    // Setup SSE only after OpenAI accepts the request
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-    });
-
-    // Stream LLM response
-    const stream = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: messagesForOpenAI,
-      stream: true,
     });
 
     let fullContent = "";
@@ -391,10 +391,17 @@ Context:\n${relevantChunks}`;
     }
   } catch (error) {
     console.error("Error during chat:", error);
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Failed to generate response", details: error.message }));
+    if (!res.headersSent) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Failed to generate response", details: error.message }));
+    } else {
+      res.write(`data: ${JSON.stringify({ type: "error", content: error.message })}\n\n`);
+      res.end();
+    }
   }
 });
+
+
 
 // Conversations Endpoint (Lists conversations for a session)
 app.get("/conversations", async (req, res) => {
