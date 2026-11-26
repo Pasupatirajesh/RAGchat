@@ -5,13 +5,6 @@ import { Message, Source } from './types';
 import { FileUpload } from './components/FileUpload';
 import { v4 as uuidv4 } from 'uuid';
 
-const express = require('express');
-const cors = require('cors');
-const app = express();
-
-app.use(cors({
-  origin: 'https://glowing-bavarois-afec96.netlify.app' // Or '*' to allow all origins
-}));
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
